@@ -86,15 +86,8 @@ func VerifyDossier(dossier domain.ReadinessDossier, snapshot domain.ReviewSnapsh
 	if err := VerifyChain(events); err != nil {
 		return err
 	}
-	foundHead := dossier.EventChainHead == "" && len(events) == 0
-	for _, event := range events {
-		if event.Hash == dossier.EventChainHead {
-			foundHead = true
-			break
-		}
-	}
-	if !foundHead {
-		return fmt.Errorf("档案引用的事件链头不存在")
+	if err := verifyDossierChainHead(dossier, events); err != nil {
+		return err
 	}
 	checklistDigest, err := ChecklistDigest(dossier.ChecklistResults)
 	if err != nil || checklistDigest != dossier.ChecklistDigest {
@@ -129,6 +122,35 @@ func VerifyDossier(dossier domain.ReadinessDossier, snapshot domain.ReviewSnapsh
 	var payload dossierPayload
 	if err := json.Unmarshal([]byte(dossier.CanonicalPayload), &payload); err != nil {
 		return fmt.Errorf("档案规范载荷无效: %w", err)
+	}
+	return nil
+}
+
+func verifyDossierChainHead(dossier domain.ReadinessDossier, events []Event) error {
+	if len(events) == 0 {
+		return fmt.Errorf("档案缺少终态 review.approved 审计事件")
+	}
+	if dossier.EventChainHead == "" {
+		return fmt.Errorf("档案事件链头必须引用真实链头")
+	}
+	terminal := events[len(events)-1]
+	if terminal.Type != "review.approved" {
+		return fmt.Errorf("链尾审计事件不是 review.approved")
+	}
+	if terminal.PreviousHash != dossier.EventChainHead {
+		return fmt.Errorf("档案事件链头与终态批准事件前序不匹配")
+	}
+	var payload struct {
+		DocumentDigest string `json:"document_digest"`
+	}
+	if err := json.Unmarshal(terminal.Payload, &payload); err != nil {
+		return fmt.Errorf("解码 review.approved 载荷失败: %w", err)
+	}
+	if payload.DocumentDigest == "" {
+		return fmt.Errorf("终态批准事件缺少 document_digest")
+	}
+	if payload.DocumentDigest != dossier.DocumentDigest {
+		return fmt.Errorf("终态批准事件 document_digest 不匹配")
 	}
 	return nil
 }
