@@ -33,20 +33,26 @@ func (s *Store) Commit(ctx context.Context, input CommitInput) (result CommitRes
 	if input.RequestID == "" || input.Fingerprint == "" {
 		return result, domain.Invalid("request_id", "request_id 和请求指纹不能为空")
 	}
-	tx, err := s.db.BeginTx(context.WithoutCancel(ctx), nil)
+	if err = ctx.Err(); err != nil {
+		return result, err
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return result, fmt.Errorf("开始事务: %w", err)
 	}
 	defer func() {
-		if err != nil {
+		if err != nil && tx != nil {
 			_ = tx.Rollback()
 		}
 	}()
-	if response, fingerprint, found, replayErr := replayTx(context.WithoutCancel(ctx), tx, input.RequestID); replayErr != nil {
+	if response, fingerprint, found, replayErr := replayTx(ctx, tx, input.RequestID); replayErr != nil {
 		return result, replayErr
 	} else if found {
 		if fingerprint != input.Fingerprint {
 			return result, domain.Invalid("request_id", "同一 request_id 对应了不同请求")
+		}
+		if err = ctx.Err(); err != nil {
+			return result, err
 		}
 		if err = tx.Commit(); err != nil {
 			return result, err
@@ -58,10 +64,10 @@ func (s *Store) Commit(ctx context.Context, input CommitInput) (result CommitRes
 		return result, fmt.Errorf("编码演练聚合: %w", err)
 	}
 	if input.ExpectedRevision == nil {
-		_, err = tx.ExecContext(context.WithoutCancel(ctx), `INSERT INTO drills(id,state,revision,data_json,created_at,updated_at) VALUES(?,?,?,?,?,?)`, input.Drill.ID, input.Drill.State, input.Drill.Revision, data, input.Drill.CreatedAt, input.Drill.UpdatedAt)
+		_, err = tx.ExecContext(ctx, `INSERT INTO drills(id,state,revision,data_json,created_at,updated_at) VALUES(?,?,?,?,?,?)`, input.Drill.ID, input.Drill.State, input.Drill.Revision, data, input.Drill.CreatedAt, input.Drill.UpdatedAt)
 	} else {
 		var current int64
-		if scanErr := tx.QueryRowContext(context.WithoutCancel(ctx), `SELECT revision FROM drills WHERE id=?`, input.Drill.ID).Scan(&current); scanErr != nil {
+		if scanErr := tx.QueryRowContext(ctx, `SELECT revision FROM drills WHERE id=?`, input.Drill.ID).Scan(&current); scanErr != nil {
 			if errors.Is(scanErr, sql.ErrNoRows) {
 				return result, domain.ErrNotFound
 			}
@@ -70,7 +76,7 @@ func (s *Store) Commit(ctx context.Context, input CommitInput) (result CommitRes
 		if current != *input.ExpectedRevision {
 			return result, &domain.RevisionConflict{Expected: *input.ExpectedRevision, Current: current}
 		}
-		res, updateErr := tx.ExecContext(context.WithoutCancel(ctx), `UPDATE drills SET state=?,revision=?,data_json=?,updated_at=? WHERE id=? AND revision=?`, input.Drill.State, input.Drill.Revision, data, input.Drill.UpdatedAt, input.Drill.ID, *input.ExpectedRevision)
+		res, updateErr := tx.ExecContext(ctx, `UPDATE drills SET state=?,revision=?,data_json=?,updated_at=? WHERE id=? AND revision=?`, input.Drill.State, input.Drill.Revision, data, input.Drill.UpdatedAt, input.Drill.ID, *input.ExpectedRevision)
 		if updateErr != nil {
 			return result, updateErr
 		}
@@ -78,16 +84,19 @@ func (s *Store) Commit(ctx context.Context, input CommitInput) (result CommitRes
 			return result, &domain.RevisionConflict{Expected: *input.ExpectedRevision, Current: current}
 		}
 	}
-	if err = syncFacts(context.WithoutCancel(ctx), tx, input.Drill); err != nil {
+	if err = syncFacts(ctx, tx, input.Drill); err != nil {
 		return result, err
 	}
-	event, err := appendEvent(context.WithoutCancel(ctx), tx, input)
+	event, err := appendEvent(ctx, tx, input)
 	if err != nil {
 		return result, err
 	}
-	_, err = tx.ExecContext(context.WithoutCancel(ctx), `INSERT INTO idempotency_requests(request_id,drill_id,fingerprint,response_json,created_at) VALUES(?,?,?,?,?)`, input.RequestID, input.Drill.ID, input.Fingerprint, input.Response, input.OccurredAt)
+	_, err = tx.ExecContext(ctx, `INSERT INTO idempotency_requests(request_id,drill_id,fingerprint,response_json,created_at) VALUES(?,?,?,?,?)`, input.RequestID, input.Drill.ID, input.Fingerprint, input.Response, input.OccurredAt)
 	if err != nil {
 		return result, fmt.Errorf("保存幂等结果: %w", err)
+	}
+	if err = ctx.Err(); err != nil {
+		return result, err
 	}
 	if err = tx.Commit(); err != nil {
 		return result, fmt.Errorf("提交事务: %w", err)
