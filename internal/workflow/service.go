@@ -70,19 +70,27 @@ type ActivationEvidenceStatus struct {
 
 func (s *Service) Get(ctx context.Context, id string) (DrillView, error) {
 	s.certifiedCacheMu.RLock()
-	drill, found := s.certifiedCache[id]
+	cached, found := s.certifiedCache[id]
 	s.certifiedCacheMu.RUnlock()
-	if !found {
-		var err error
-		drill, err = s.store.Load(ctx, id)
+	if found {
+		drill, err := cloneDrillCase(cached)
 		if err != nil {
 			return DrillView{}, err
 		}
-		if drill.State == domain.StateCertified {
-			s.certifiedCacheMu.Lock()
-			s.certifiedCache[id] = drill
-			s.certifiedCacheMu.Unlock()
+		return viewFor(drill, false, s.now()), nil
+	}
+	drill, err := s.store.Load(ctx, id)
+	if err != nil {
+		return DrillView{}, err
+	}
+	if drill.State == domain.StateCertified {
+		clone, err := cloneDrillCase(drill)
+		if err != nil {
+			return DrillView{}, err
 		}
+		s.certifiedCacheMu.Lock()
+		s.certifiedCache[id] = clone
+		s.certifiedCacheMu.Unlock()
 	}
 	return viewFor(drill, false, s.now()), nil
 }
@@ -263,6 +271,18 @@ func ensureRevision(drill domain.DrillCase, expected int64) error {
 		return &domain.RevisionConflict{Expected: expected, Current: drill.Revision}
 	}
 	return nil
+}
+
+func cloneDrillCase(source domain.DrillCase) (domain.DrillCase, error) {
+	data, err := json.Marshal(source)
+	if err != nil {
+		return domain.DrillCase{}, fmt.Errorf("克隆演练聚合: %w", err)
+	}
+	var clone domain.DrillCase
+	if err := json.Unmarshal(data, &clone); err != nil {
+		return domain.DrillCase{}, fmt.Errorf("克隆演练聚合: %w", err)
+	}
+	return clone, nil
 }
 
 func sortCheckpoints(checkpoints []domain.Checkpoint) {
