@@ -33,6 +33,10 @@ func Open(path string) (*Store, error) {
 		db.Close()
 		return nil, err
 	}
+	if err := store.VerifyAggregates(context.Background()); err != nil {
+		db.Close()
+		return nil, err
+	}
 	return store, nil
 }
 
