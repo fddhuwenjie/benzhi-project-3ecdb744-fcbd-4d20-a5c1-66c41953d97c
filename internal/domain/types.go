@@ -109,24 +109,26 @@ type RemediationPlanVersion struct {
 }
 
 type Finding struct {
-	ID                    string                   `json:"id"`
-	DrillID               string                   `json:"drill_id"`
-	CheckpointID          string                   `json:"checkpoint_id"`
-	RuleCode              string                   `json:"rule_code"`
-	RuleVersion           string                   `json:"rule_version"`
-	Severity              Severity                 `json:"severity"`
-	Status                FindingStatus            `json:"status"`
-	Cause                 string                   `json:"cause,omitempty"`
-	CorrectiveAction      string                   `json:"corrective_action,omitempty"`
-	OwnerID               string                   `json:"owner_id,omitempty"`
-	RetestPlannedAt       string                   `json:"retest_planned_at,omitempty"`
-	RetestObservationID   string                   `json:"retest_observation_id,omitempty"`
-	OpenedAt              string                   `json:"opened_at"`
-	ClosedAt              string                   `json:"closed_at,omitempty"`
-	ReceiptID             string                   `json:"receipt_id,omitempty"`
-	ReviewChecklistItemID string                   `json:"review_checklist_item_id,omitempty"`
-	EvidenceCategory      string                   `json:"evidence_category,omitempty"`
-	PlanHistory           []RemediationPlanVersion `json:"plan_history,omitempty"`
+	ID                        string                   `json:"id"`
+	DrillID                   string                   `json:"drill_id"`
+	CheckpointID              string                   `json:"checkpoint_id"`
+	RuleCode                  string                   `json:"rule_code"`
+	RuleVersion               string                   `json:"rule_version"`
+	Severity                  Severity                 `json:"severity"`
+	Status                    FindingStatus            `json:"status"`
+	Cause                     string                   `json:"cause,omitempty"`
+	CorrectiveAction          string                   `json:"corrective_action,omitempty"`
+	OwnerID                   string                   `json:"owner_id,omitempty"`
+	RetestPlannedAt           string                   `json:"retest_planned_at,omitempty"`
+	RetestObservationID       string                   `json:"retest_observation_id,omitempty"`
+	OpenedAt                  string                   `json:"opened_at"`
+	ClosedAt                  string                   `json:"closed_at,omitempty"`
+	ReceiptID                 string                   `json:"receipt_id,omitempty"`
+	ReviewChecklistItemID     string                   `json:"review_checklist_item_id,omitempty"`
+	EvidenceCategory          string                   `json:"evidence_category,omitempty"`
+	OriginalEvidenceDigest    string                   `json:"original_evidence_digest,omitempty"`
+	ReplacementEvidenceDigest string                   `json:"replacement_evidence_digest,omitempty"`
+	PlanHistory               []RemediationPlanVersion `json:"plan_history,omitempty"`
 }
 
 type ReviewChecklistItem struct {

@@ -9,6 +9,15 @@ import (
 	"shelter-drill-gate/internal/domain"
 )
 
+func activationCategoryDigest(evidence domain.ActivationEvidence, category string) string {
+	for _, record := range domain.ActivationRecords(evidence) {
+		if record.Category == category {
+			return record.Record.ContentDigest
+		}
+	}
+	return ""
+}
+
 type ObservationInput struct {
 	Mutation
 	CheckpointID        string `json:"checkpoint_id"`
@@ -194,9 +203,50 @@ func (s *Service) SubmitRetest(ctx context.Context, drillID, findingID string, i
 	if finding.Status != domain.FindingPlanned {
 		return DrillView{}, domain.Invalid("finding.status", "必须先完整登记整改措施")
 	}
+	isEvidenceReturn := finding.RuleCode == "REVIEW_RETURN" && finding.EvidenceCategory != "" && finding.CheckpointID == ""
+	if isEvidenceReturn {
+		if drill.Activation == nil {
+			return DrillView{}, domain.Invalid("activation", "启用证据尚未登记，无法提交替换证据复测")
+		}
+		if err := domain.ValidateDigest("evidence_digest", input.EvidenceDigest); err != nil {
+			return DrillView{}, err
+		}
+		currentDigest := activationCategoryDigest(*drill.Activation, finding.EvidenceCategory)
+		if currentDigest == "" {
+			return DrillView{}, domain.Invalid("evidence_category", "证据类别不存在")
+		}
+		if currentDigest != input.EvidenceDigest {
+			return DrillView{}, domain.Invalid("evidence_digest", "复测证据摘要与当前启用证据不一致，请先重新登记该类别启用证据")
+		}
+		if finding.OriginalEvidenceDigest != "" && currentDigest == finding.OriginalEvidenceDigest {
+			return DrillView{}, domain.Invalid("evidence_digest", "证据未更新，请先重新登记该类别启用证据后再提交复测")
+		}
+		observation := domain.Observation{
+			ID: newID("retest"), DrillID: drill.ID, CheckpointID: finding.ReviewChecklistItemID, ObservationKind: "evidence_retest",
+			ObservedAt: input.ObservedAt, ObserverID: input.ActorID, EvidenceDigest: input.EvidenceDigest,
+			SubmittedAt: s.mutationTime(),
+		}
+		if err := domain.ValidateObservationWindow(drill, observation); err != nil {
+			return DrillView{}, err
+		}
+		drill.Observations = append(drill.Observations, observation)
+		finding.Status = domain.FindingClosed
+		finding.RetestObservationID = observation.ID
+		finding.ReplacementEvidenceDigest = input.EvidenceDigest
+		finding.ClosedAt = observation.SubmittedAt
+		drill.Findings[index] = finding
+		overdueSeconds := int64(0)
+		if due, parseErr := domain.ParseTime(finding.RetestPlannedAt); parseErr == nil && s.now().UTC().After(due) {
+			overdueSeconds = int64(s.now().UTC().Sub(due) / time.Second)
+		}
+		return s.advance(ctx, drill, input.Mutation, fp, "finding.retest_passed", map[string]any{"finding_id": finding.ID, "observation_id": observation.ID, "rule_code": finding.RuleCode, "evidence_category": finding.EvidenceCategory, "replacement_evidence_digest": input.EvidenceDigest, "overdue_seconds": overdueSeconds})
+	}
 	checkpoint, checkpointFound := drill.CheckpointByID(finding.CheckpointID)
 	if !checkpointFound && finding.RuleCode != "REVIEW_RETURN" {
 		return DrillView{}, fmt.Errorf("整改项引用了不存在的检查点")
+	}
+	if !checkpointFound {
+		return DrillView{}, domain.Invalid("finding.checkpoint_id", "证据退回整改项缺少证据类别，无法以检查点复测关闭")
 	}
 	observation := domain.Observation{
 		ID: newID("retest"), DrillID: drill.ID, CheckpointID: checkpoint.ID, ObservationKind: "retest",

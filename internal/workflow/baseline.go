@@ -63,8 +63,8 @@ func (s *Service) RegisterActivation(ctx context.Context, drillID string, input 
 	if err := ensureRevision(drill, input.ExpectedRevision); err != nil {
 		return DrillView{}, err
 	}
-	if drill.State != domain.StateFrozen {
-		return DrillView{}, domain.Invalid("state", "仅基线已冻结状态可登记启用证据")
+	if drill.State != domain.StateFrozen && drill.State != domain.StateRemediation {
+		return DrillView{}, domain.Invalid("state", "仅基线已冻结或整改复测状态可登记启用证据")
 	}
 	if drill.CoordinatorID != input.ActorID {
 		return DrillView{}, domain.ErrForbidden

@@ -118,12 +118,16 @@ func (s *Service) ReviewDecision(ctx context.Context, drillID string, input Revi
 			return DrillView{}, err
 		}
 		for _, returned := range returnedItems {
-			drill.Findings = append(drill.Findings, domain.Finding{
+			finding := domain.Finding{
 				ID: newID("finding"), DrillID: drill.ID, CheckpointID: returned.CheckpointID,
 				RuleCode: "REVIEW_RETURN", RuleVersion: drill.RuleVersion, Severity: domain.SeverityMajor,
 				Status: domain.FindingOpen, Cause: opinionFor(input.Checklist, returned.ID), OpenedAt: decidedAt,
 				ReviewChecklistItemID: returned.ID, EvidenceCategory: returned.EvidenceCategory,
-			})
+			}
+			if returned.EvidenceCategory != "" && returned.CheckpointID == "" {
+				finding.OriginalEvidenceDigest = snapshotActivationDigest(*drill.CurrentSnapshot, returned.EvidenceCategory)
+			}
+			drill.Findings = append(drill.Findings, finding)
 		}
 		drill.ReviewHistory = append(drill.ReviewHistory, record)
 		drill.CurrentSnapshot = nil
@@ -248,6 +252,15 @@ func opinionFor(results []domain.ReviewChecklistResult, itemID string) string {
 	for _, result := range results {
 		if result.ItemID == itemID {
 			return strings.TrimSpace(result.Opinion)
+		}
+	}
+	return ""
+}
+
+func snapshotActivationDigest(snapshot domain.ReviewSnapshot, category string) string {
+	for _, record := range domain.ActivationRecords(snapshot.Activation) {
+		if record.Category == category {
+			return record.Record.ContentDigest
 		}
 	}
 	return ""
