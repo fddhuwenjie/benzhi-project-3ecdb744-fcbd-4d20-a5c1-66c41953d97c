@@ -227,6 +227,8 @@ func newID(prefix string) string {
 
 func (s *Service) mutationTime() string { return domain.NormalizeTime(s.now()) }
 
+func (s *Service) Ping(ctx context.Context) error { return s.store.Ping(ctx) }
+
 func validateMutation(m Mutation) error {
 	if m.RequestID == "" {
 		return domain.Invalid("request_id", "不能为空")
