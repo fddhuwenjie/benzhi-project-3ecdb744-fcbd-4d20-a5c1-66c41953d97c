@@ -1,0 +1,110 @@
+.receipt-list {
+  display: grid;
+  gap: 14px;
+}
+.receipt {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.receipt:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.receipt header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 9px;
+  font-size: 12px;
+}
+.receipt header code,
+.evidence-item code {
+  color: var(--muted);
+  font-size: 9px;
+  word-break: break-all;
+}
+.judgment-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+.judgment {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #fafbfa;
+  color: var(--ink);
+  text-align: left;
+}
+.judgment.passed { border-left: 3px solid var(--green); }
+.judgment.failed { border-left: 3px solid var(--red); }
+.judgment small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 10px;
+}
+.finding-wrap { border-top: 1px solid #e4e8e6; }
+.finding-wrap:first-child { border-top: 0; }
+.finding-wrap .finding-item { border-top: 0; }
+.finding-wrap details {
+  padding: 0 0 10px 100px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.finding-wrap details ol { margin: 7px 0; }
+.due {
+  margin-top: 4px;
+  font-size: 10px;
+}
+.due.near_due { color: var(--amber); }
+.due.overdue {
+  color: var(--red);
+  font-weight: 700;
+}
+.evidence-item { flex-wrap: wrap; }
+.evidence-item small {
+  width: 100%;
+  color: var(--muted);
+}
+.activation-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.activation-fields fieldset {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.activation-fields legend {
+  font-size: 12px;
+  font-weight: 700;
+}
+.review-checklist {
+  display: grid;
+  gap: 8px;
+}
+.review-item {
+  display: grid;
+  grid-template-columns: 1fr 90px;
+  gap: 6px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.review-item strong { font-size: 11px; }
+.review-item select {
+  border: 1px solid #bcc6c1;
+  border-radius: 4px;
+  background: #fff;
+}
+.review-item input { grid-column: 1 / -1; }
+.button-row { flex-wrap: wrap; }
+@media (max-width: 760px) {
+  .activation-fields,
+  .judgment-grid { grid-template-columns: 1fr; }
+  .finding-wrap details { padding-left: 0; }
+}
