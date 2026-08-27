@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>避难演练就绪认证台</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="stylesheet" href="/assets/extended.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">安</span><div><strong>避难演练认证台</strong><small>就绪档案控制中心</small></div></div>
+      <button id="newDrill" class="primary wide" type="button">＋ 新建演练档案</button>
+      <div class="side-label">演练档案</div>
+      <nav id="drillList" class="drill-list" aria-label="演练档案列表"></nav>
+      <div class="sidebar-foot"><span class="online-dot"></span>本地审计服务正常</div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div><p id="siteLabel" class="eyebrow">尚未选择演练</p><h1 id="titleLabel">就绪认证工作台</h1></div>
+        <div class="top-actions"><span id="revisionBadge" class="revision">revision -</span><button id="refresh" class="icon-button" type="button" title="刷新">↻</button></div>
+      </header>
+
+      <section id="emptyState" class="empty-state">
+        <div class="empty-symbol">✓</div><h2>建立首个演练档案</h2><p>冻结现场基线后，即可登记启用证据并开始演练。</p>
+        <button class="primary" data-action="new" type="button">新建演练档案</button>
+      </section>
+
+      <div id="caseView" class="case-view hidden">
+        <section class="status-band" aria-label="演练状态轨迹">
+          <div id="stateRail" class="state-rail"></div>
+        </section>
+        <div id="notice" class="notice hidden" role="status"></div>
+
+        <section class="summary-band">
+          <div><span>计划时窗</span><strong id="windowValue">-</strong></div>
+          <div><span>规则版本</span><strong id="ruleValue">-</strong></div>
+          <div><span>基线版本</span><strong id="baselineValue">-</strong></div>
+          <div><span>未关闭问题</span><strong id="openValue">-</strong></div>
+          <div class="command-cell"><button id="primaryAction" class="primary hidden" type="button"></button></div>
+        </section>
+
+        <div class="content-grid">
+          <div class="main-column">
+            <section class="section-block">
+              <div class="section-heading"><div><p class="eyebrow">冻结配置</p><h2>基线与检查点</h2></div><span id="riskTags" class="tag-row"></span></div>
+              <div class="table-wrap"><table><thead><tr><th>顺序</th><th>检查点</th><th>责任岗位</th><th>最低人数</th><th>耗时上限</th><th>通信</th><th>无障碍</th></tr></thead><tbody id="checkpointRows"></tbody></table></div>
+            </section>
+
+            <section id="observationSection" class="section-block hidden">
+              <div class="section-heading"><div><p class="eyebrow">现场事实</p><h2>提交检查点记录</h2></div><span id="nextCheckpoint" class="status-chip"></span></div>
+              <form id="observationForm" class="form-grid compact">
+                <label><span>观察时间</span><input name="observed_at" type="datetime-local" required></label>
+                <label><span>到位人数</span><input name="participant_count" type="number" min="0" required></label>
+                <label><span>实际耗时（秒）</span><input name="elapsed_seconds" type="number" min="0" required></label>
+                <label class="check"><input name="communication_passed" type="checkbox"><span>通信通过</span></label>
+                <label class="check"><input name="accessibility_passed" type="checkbox"><span>无障碍通过</span></label>
+                <label class="span-2"><span>证据摘要原文</span><input name="evidence" placeholder="记录照片、表单或设备日志索引" required></label>
+                <button class="primary" type="submit">提交现场记录</button>
+              </form>
+            </section>
+
+            <section class="section-block">
+              <div class="section-heading"><div><p class="eyebrow">不可覆盖事实</p><h2>检查点判定历史</h2></div><span id="receiptCount" class="count-badge">0</span></div>
+              <div id="receiptList" class="receipt-list"><div class="muted-row">暂无判定回执</div></div>
+            </section>
+
+            <section class="section-block">
+              <div class="section-heading"><div><p class="eyebrow">规则判定</p><h2>问题整改队列</h2></div><span id="findingCount" class="count-badge">0</span></div>
+              <div id="findingList" class="finding-list"><div class="muted-row">暂无整改项</div></div>
+            </section>
+          </div>
+
+          <aside class="detail-column">
+            <section class="side-section"><div class="section-heading"><div><p class="eyebrow">启用核验</p><h2>现场就绪证据</h2></div></div><div id="activationView" class="evidence-list"></div></section>
+            <section id="reviewPanel" class="side-section hidden"><div class="section-heading"><div><p class="eyebrow">职责分离</p><h2>独立复核</h2></div></div><div id="snapshotView" class="snapshot"></div><form id="reviewForm" class="stack-form"><label><span>复核员标识</span><input name="reviewer_id" value="reviewer-01" required></label><label><span>复核理由</span><textarea name="reason" required></textarea></label><div class="button-row"><button class="secondary danger" name="decision" value="returned" type="submit">退回整改</button><button class="primary" name="decision" value="approved" type="submit">批准认证</button></div></form></section>
+            <section id="dossierPanel" class="side-section hidden"><div class="section-heading"><div><p class="eyebrow">只读终态</p><h2>就绪档案</h2></div><span class="sealed">已封存</span></div><div id="dossierView" class="dossier"></div><button id="verifyDossier" class="secondary wide" type="button">重新计算并验证摘要</button></section>
+            <section class="side-section"><div class="section-heading"><div><p class="eyebrow">只追加事件</p><h2>审计时间线</h2></div><button id="loadTimeline" class="link-button" type="button">刷新</button></div><ol id="timeline" class="timeline"><li class="muted-row">选择档案后显示事件</li></ol></section>
+          </aside>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="createDialog"><form id="createForm" class="dialog-form"><div class="dialog-head"><div><p class="eyebrow">新建业务档案</p><h2>配置演练基线</h2></div><button class="icon-button" data-close type="button" title="关闭">×</button></div><div class="form-grid"><label><span>演练名称</span><input name="title" required></label><label><span>避难场所</span><input name="site_name" required></label><label><span>协调员标识</span><input name="actor_id" value="coordinator-01" required></label><label><span>场景风险（逗号分隔）</span><input name="risks" value="地震,通信中断" required></label><label><span>计划开始</span><input name="planned_start" type="datetime-local" required></label><label><span>计划结束</span><input name="planned_end" type="datetime-local" required></label></div><div class="checkpoint-editor"><div class="section-heading"><h3>现场检查点</h3><button id="addCheckpoint" class="secondary small" type="button">＋ 添加</button></div><div id="checkpointEditor"></div></div><div class="dialog-actions"><button class="secondary" data-close type="button">取消</button><button class="primary" type="submit">创建档案</button></div></form></dialog>
+
+  <dialog id="activationDialog"><form id="activationForm" class="dialog-form narrow"><div class="dialog-head"><h2>登记启用证据</h2><button class="icon-button" data-close type="button">×</button></div><label><span>疏散路线证据</span><input name="evacuation_route" required></label><label><span>通信设备证据</span><input name="communication_gear" required></label><label><span>无障碍设施证据</span><input name="accessible_facility" required></label><label><span>人员到位证据</span><input name="personnel_ready" required></label><div class="dialog-actions"><button class="secondary" data-close type="button">取消</button><button class="primary" type="submit">确认登记</button></div></form></dialog>
+
+  <dialog id="findingDialog"><form id="findingForm" class="dialog-form narrow"><div class="dialog-head"><div><p id="findingModeLabel" class="eyebrow">整改措施</p><h2 id="findingTitle">处理问题</h2></div><button class="icon-button" data-close type="button">×</button></div><div id="planFields"><label><span>原因分析</span><textarea name="cause"></textarea></label><label><span>整改措施</span><textarea name="corrective_action"></textarea></label><label><span>责任人</span><input name="owner_id"></label><label><span>复测计划</span><input name="retest_planned_at" type="datetime-local"></label></div><div id="retestFields" class="hidden"><label><span>复测时间</span><input name="observed_at" type="datetime-local"></label><label><span>到位人数</span><input name="participant_count" type="number" min="0"></label><label><span>耗时（秒）</span><input name="elapsed_seconds" type="number" min="0"></label><label class="check"><input name="communication_passed" type="checkbox"><span>通信通过</span></label><label class="check"><input name="accessibility_passed" type="checkbox"><span>无障碍通过</span></label><label><span>复测证据摘要原文</span><input name="evidence"></label></div><div class="dialog-actions"><button class="secondary" data-close type="button">取消</button><button class="primary" type="submit">提交</button></div></form></dialog>
+
+  <script src="/assets/app.js" defer></script>
+</body>
+</html>
